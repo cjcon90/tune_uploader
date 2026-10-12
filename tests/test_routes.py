@@ -124,3 +124,9 @@ def test_dates_read_naturally(client):
     page = client.get("/").data.decode()
     assert re.search(r"\b\d{1,2} [A-Z][a-z]{2} \d{4}\b", page)
     assert not re.search(r"\b\d{4}-\d{2}-\d{2}\b", page)
+
+
+def test_add_button_uses_a_plain_plus(client):
+    page = client.get("/").data.decode()
+    assert "+ Add a tune" in page
+    assert "＋" not in page
