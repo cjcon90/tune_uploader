@@ -1,14 +1,20 @@
 {% extends "base.html" %}
 {% block main %}
-<article>
-  <hgroup><h1>Add a tune</h1><p>Sheet music from StaffPad and a recording of the tune.</p></hgroup>
-  <form method="post" enctype="multipart/form-data" data-upload>
-    <label>Title <input name="title" required autocomplete="off"></label>
-    <label>Sheet music (MusicXML) <input type="file" name="sheet" required></label>
-    <label>Recording <input type="file" name="recording" required></label>
-    <button type="submit">Save tune</button>
-    <progress hidden></progress>
-    <p class="progress" hidden></p>
-  </form>
-</article>
+<h1 class="large">Add a tune</h1>
+<form method="post" enctype="multipart/form-data" class="card" data-upload>
+  <div class="field">
+    <label for="title">Title</label>
+    <input id="title" name="title" required autocomplete="off">
+  </div>
+  <div class="field">
+    <span class="field-name">Sheet music <small>(MusicXML file from StaffPad)</small></span>
+    {% with name="sheet", prompt="Choose a MusicXML file…" %}{% include "pick.html" %}{% endwith %}
+  </div>
+  <div class="field">
+    <span class="field-name">Recording</span>
+    {% with name="recording", prompt="Choose a recording…" %}{% include "pick.html" %}{% endwith %}
+  </div>
+  <button type="submit" class="btn press wide">Save tune</button>
+  <div class="prog" hidden><div class="track"><i></i></div><span></span></div>
+</form>
 {% endblock %}

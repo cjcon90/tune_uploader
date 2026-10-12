@@ -1,71 +1,74 @@
 {% extends "base.html" %}
 {% block main %}
-<hgroup>
-  <h1>{{ tune.title }}</h1>
-  <p>{% if tune.archived %}Hidden from your list. Its QR code still works.{% else %}Added {{ tune.created | nicedate }}{% endif %}</p>
-</hgroup>
+<div>
+  <h1 class="large">{{ tune.title }}</h1>
+  <p class="sub">{% if tune.archived %}Hidden from your list. Its QR code still works.{% else %}Added {{ tune.created | nicedate }}{% endif %}</p>
+</div>
 
-<article>
-  <audio controls preload="none" src="{{ qr_url }}"></audio>
-  <div class="actions">
-    <a href="{{ url_for('main.sheet_pdf', tune_id=tune.id) }}" role="button" class="outline">Sheet music</a>
-    <a href="{{ url_for('main.sheet_qr_pdf', tune_id=tune.id) }}" role="button">Sheet music with QR</a>
+<section class="card">
+  <div class="player" data-player>
+    <button type="button" class="play big press" aria-label="Play">{% include "play.svg" %}</button>
+    <audio preload="metadata" src="{{ qr_url }}"></audio>
+    <div class="track"><i></i></div>
+    <span class="time">0:00</span>
   </div>
-</article>
+  <div class="pair">
+    <a href="{{ url_for('main.sheet_pdf', tune_id=tune.id) }}" class="btn soft press" target="_blank">Sheet music</a>
+    <a href="{{ url_for('main.sheet_qr_pdf', tune_id=tune.id) }}" class="btn soft press" target="_blank">Sheet music with QR</a>
+  </div>
+</section>
 
-<article>
-  <p class="link-label">QR code link</p>
-  <div class="link-row">
-    <code>{{ qr_url }}</code>
-    <button type="button" class="secondary" data-copy="{{ qr_url }}">Copy</button>
-  </div>
-  <p class="link-label">Friendly link</p>
-  <div class="link-row">
-    <code>{{ vanity_url }}</code>
-    <button type="button" class="secondary" data-copy="{{ vanity_url }}">Copy</button>
-  </div>
-</article>
+<section class="card">
+  <span class="label">QR code link</span>
+  <div class="link"><code>{{ qr_url }}</code><button type="button" class="chip press" data-copy="{{ qr_url }}">Copy</button></div>
+  <span class="label">Friendly link</span>
+  <div class="link"><code>{{ vanity_url }}</code><button type="button" class="chip press" data-copy="{{ vanity_url }}">Copy</button></div>
+</section>
 
-<article>
-  <form method="post" action="{{ url_for('main.rename', tune_id=tune.id) }}" data-upload>
+<section class="card">
+  <form method="post" action="{{ url_for('main.rename', tune_id=tune.id) }}" class="field" data-upload>
     <label for="title">Rename</label>
-    <div class="field-row">
+    <div class="inline">
       <input id="title" name="title" value="{{ tune.title }}" required>
-      <button type="submit">Rename</button>
+      <button type="submit" class="btn press">Rename</button>
     </div>
-    <progress hidden></progress>
-    <p class="progress" hidden></p>
+    <div class="prog" hidden><div class="track"><i></i></div><span></span></div>
   </form>
   <form method="post" action="{{ url_for('main.replace_recording', tune_id=tune.id) }}"
-        enctype="multipart/form-data" data-upload>
-    <label for="recording">Replace recording</label>
-    <div class="field-row">
-      <input type="file" id="recording" name="recording" required>
-      <button type="submit">Upload</button>
+        enctype="multipart/form-data" class="field" data-upload>
+    <span class="field-name">Replace recording</span>
+    <div class="inline">
+      {% with name="recording", prompt="Choose a recording…" %}{% include "pick.html" %}{% endwith %}
+      <button type="submit" class="btn press">Upload</button>
     </div>
-    <progress hidden></progress>
-    <p class="progress" hidden></p>
+    <div class="prog" hidden><div class="track"><i></i></div><span></span></div>
   </form>
   <form method="post" action="{{ url_for('main.replace_sheet', tune_id=tune.id) }}"
-        enctype="multipart/form-data" data-upload>
-    <label for="sheet">Replace sheet music <span class="muted">(MusicXML file)</span></label>
-    <div class="field-row">
-      <input type="file" id="sheet" name="sheet" required>
-      <button type="submit">Upload</button>
+        enctype="multipart/form-data" class="field" data-upload>
+    <span class="field-name">Replace sheet music <small>(MusicXML file)</small></span>
+    <div class="inline">
+      {% with name="sheet", prompt="Choose a MusicXML file…" %}{% include "pick.html" %}{% endwith %}
+      <button type="submit" class="btn press">Upload</button>
     </div>
-    <progress hidden></progress>
-    <p class="progress" hidden></p>
+    <div class="prog" hidden><div class="track"><i></i></div><span></span></div>
   </form>
-</article>
+</section>
 
 {% if tune.archived %}
-<form method="post" action="{{ url_for('main.restore', tune_id=tune.id) }}">
-  <button type="submit" class="outline secondary">Show in my list</button>
+<form method="post" action="{{ url_for('main.restore', tune_id=tune.id) }}" class="center">
+  <button type="submit" class="btn quiet press">Show in my list</button>
 </form>
 {% else %}
-<form method="post" action="{{ url_for('main.archive', tune_id=tune.id) }}"
-      onsubmit="return confirm('Hide this tune from your list? Its QR code keeps working.')">
-  <button type="submit" class="outline secondary">Hide from my list</button>
+<form method="post" action="{{ url_for('main.archive', tune_id=tune.id) }}" class="center" data-confirm>
+  <button type="submit" class="btn quiet press">Hide from my list</button>
+  <div class="scrim" hidden></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="hide-title" hidden>
+    <div class="sheet-box">
+      <p class="sheet-msg"><b id="hide-title">Hide “{{ tune.title }}”?</b>It disappears from your list. Its QR code keeps working.</p>
+      <button type="button" class="danger" data-yes>Hide</button>
+    </div>
+    <div class="sheet-box"><button type="button" class="cancel" data-no>Cancel</button></div>
+  </div>
 </form>
 {% endif %}
 {% endblock %}

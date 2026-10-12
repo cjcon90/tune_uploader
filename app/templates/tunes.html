@@ -1,31 +1,28 @@
 {% extends "base.html" %}
 {% block main %}
 {% if archived %}
-  <hgroup><h1>Hidden tunes</h1><p>These are hidden from your list. Their QR codes still work.</p></hgroup>
+<h1 class="large">Hidden tunes</h1>
+<p class="sub">Hidden from your list. Their QR codes still work.</p>
 {% else %}
-  <form method="get" role="search">
-    <input type="search" name="q" value="{{ q }}" placeholder="Search your tunes" aria-label="Search">
-    <button type="submit" class="secondary">Search</button>
-  </form>
+<h1 class="large">My Tunes</h1>
+<form method="get" role="search" class="search">
+  {% include "search.svg" %}
+  <input type="search" name="q" value="{{ q }}" placeholder="Search" aria-label="Search tunes" autocomplete="off" data-filter>
+</form>
 {% endif %}
-{% for t in tunes %}
-<article class="tune" data-href="{{ url_for('main.tune', tune_id=t.id) }}">
-  <header>
-    <div>
-      <a href="{{ url_for('main.tune', tune_id=t.id) }}" class="tune-title">{{ t.title }}</a>
-      <small class="date">{{ t.created | nicedate }}</small>
-    </div>
-    <a href="{{ url_for('main.tune', tune_id=t.id) }}" role="button" class="open">Open ›</a>
-  </header>
-  <div class="actions">
-    <button type="button" class="outline" data-play>▶ Play</button>
+<div class="list">
+  {% for t in tunes %}
+  <div class="row press" data-href="{{ url_for('main.tune', tune_id=t.id) }}" data-title="{{ t.title | lower }}">
+    <button type="button" class="play press" data-play aria-label="Play {{ t.title }}">{% include "play.svg" %}</button>
     <audio preload="none" src="https://{{ config_audio_host }}/{{ t.id }}"></audio>
-    <a href="{{ url_for('main.sheet_pdf', tune_id=t.id) }}" role="button" class="outline secondary">Sheet music</a>
-    <a href="{{ url_for('main.sheet_qr_pdf', tune_id=t.id) }}" role="button" class="outline secondary">With QR</a>
+    <a href="{{ url_for('main.tune', tune_id=t.id) }}" class="row-text">
+      <span class="row-title">{{ t.title }}</span>
+      <span class="row-meta">{{ t.created | nicedate }}</span>
+    </a>
+    <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
   </div>
-</article>
-{% else %}
-<article class="empty">{% if q %}No tunes match “{{ q }}”.{% elif archived %}No hidden tunes.{% else %}Nothing here yet. Tap “Add a tune” to start.{% endif %}</article>
-{% endfor %}
-{% if has_hidden %}<p class="footer-link"><a href="{{ url_for('main.archived') }}" class="secondary">Hidden tunes</a></p>{% endif %}
+  {% endfor %}
+  <p class="empty" {% if tunes %}hidden{% endif %} data-empty>{% if archived %}No hidden tunes.{% elif tunes or q %}No tunes match.{% else %}Nothing here yet. Tap “+ Add a tune” to start.{% endif %}</p>
+</div>
+{% if has_hidden %}<p class="foot"><a href="{{ url_for('main.archived') }}">Hidden tunes</a></p>{% endif %}
 {% endblock %}

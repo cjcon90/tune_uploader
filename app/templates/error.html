@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block main %}
-<article class="narrow">
+<div class="narrow card">
   <p class="error">{{ message }}</p>
-  <div class="grid">
-    {% if back %}<a href="{{ back }}" role="button" class="outline">Go back</a>{% endif %}
-    <a href="{{ url_for('main.tunes') }}" role="button">My tunes</a>
+  <div class="pair">
+    {% if back %}<a href="{{ back }}" class="btn soft press">Go back</a>{% endif %}
+    <a href="{{ url_for('main.tunes') }}" class="btn press">My Tunes</a>
   </div>
-</article>
+</div>
 {% endblock %}

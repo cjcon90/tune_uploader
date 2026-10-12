@@ -219,8 +219,7 @@ def test_every_change_says_what_happened(client):
 def test_home_page_makes_opening_a_tune_obvious_and_plays_in_place(client):
     tune_id = _tune_id(_add(client))
     html = client.get("/").data.decode()
-    assert f'href="/tune/{tune_id}"' in html
-    assert "Open" in html
+    assert f'data-href="/tune/{tune_id}"' in html
     assert f'<audio preload="none" src="https://audio.paulinemahon.com/{tune_id}"' in html
     assert 'href="https://audio.paulinemahon.com/' not in html
 
@@ -228,7 +227,7 @@ def test_home_page_makes_opening_a_tune_obvious_and_plays_in_place(client):
 def test_inner_pages_have_a_way_back(client):
     tune_id = _tune_id(_add(client))
     for url in ("/add", f"/tune/{tune_id}", "/archived"):
-        assert "Back to my tunes" in client.get(url).data.decode(), url
+        assert "‹ My Tunes" in client.get(url).data.decode(), url
 
 
 def test_archive_is_called_hiding(client):
