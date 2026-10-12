@@ -27,5 +27,5 @@
 {% else %}
 <article class="empty">{% if q %}No tunes match “{{ q }}”.{% elif archived %}No hidden tunes.{% else %}Nothing here yet. Tap “Add a tune” to start.{% endif %}</article>
 {% endfor %}
-{% if not archived %}<p class="footer-link"><a href="{{ url_for('main.archived') }}" class="secondary">Hidden tunes</a></p>{% endif %}
+{% if has_hidden %}<p class="footer-link"><a href="{{ url_for('main.archived') }}" class="secondary">Hidden tunes</a></p>{% endif %}
 {% endblock %}

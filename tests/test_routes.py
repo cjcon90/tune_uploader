@@ -79,8 +79,10 @@ def test_rename_archive_restore(client, library):
     tune_id = _tune_id(_add(client))
     client.post(f"/tune/{tune_id}/rename", data={"title": "The Old Kesh"})
     assert library.get(tune_id)["title"] == "The Old Kesh"
+    assert b"Hidden tunes" not in client.get("/").data
     client.post(f"/tune/{tune_id}/archive")
     assert b"The Old Kesh" not in client.get("/").data
+    assert b"Hidden tunes" in client.get("/").data
     assert b"The Old Kesh" in client.get("/archived").data
     client.post(f"/tune/{tune_id}/restore")
     assert b"The Old Kesh" in client.get("/").data

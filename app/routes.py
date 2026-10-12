@@ -65,7 +65,14 @@ def logout():
 def tunes():
     q = request.args.get("q", "").strip()
     found = [t for t in _library().list() if q.lower() in t["title"].lower()]
-    return render_template("tunes.html", tunes=found, q=q, archived=False, done=_done_message())
+    return render_template(
+        "tunes.html",
+        tunes=found,
+        q=q,
+        archived=False,
+        has_hidden=bool(_library().list(archived=True)),
+        done=_done_message(),
+    )
 
 
 @bp.get("/archived")
