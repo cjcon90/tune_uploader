@@ -1,5 +1,6 @@
 import subprocess
 import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path
 
 import qrcode
@@ -48,6 +49,50 @@ def clean_up(root: ET.Element) -> None:
     _hide_part_names(root)
     _remove_tempo_marking(root)
     _remove_courtesy_accidentals(root)
+    _break_lines(root)
+
+
+def _break_lines(root: ET.Element) -> None:
+    # Tune-book layout: four bars a line, where a 2nd-time ending shares its bar slot with the
+    # 1st-time ending before it, so each 8-bar part fills two lines.
+    for part in root.iter("part"):
+        slot = 0
+        for measure in part.iter("measure"):
+            for old in measure.findall("print"):
+                measure.remove(old)
+            if _is_later_ending(measure):
+                continue
+            if slot and slot % 4 == 0:
+                measure.insert(0, ET.Element("print", {"new-system": "yes"}))
+            slot += 1
+
+
+def _is_later_ending(measure: ET.Element) -> bool:
+    ending = measure.find("barline/ending[@type='start']")
+    return ending is not None and not ending.get("number", "").startswith("1")
+
+
+def _bars_to_keep_with_next(root: ET.Element) -> list[int]:
+    measures = list(root.find("part").iter("measure"))
+    return [i - 1 for i, measure in enumerate(measures) if i and _is_later_ending(measure)]
+
+
+def _keep_with_next(mscz_path: Path, indexes: list[int]) -> None:
+    # MusicXML can't say "keep these bars on one line", so it goes into MuseScore's own file;
+    # without it a busy line pushes the 2nd-time ending onto a line of its own.
+    with zipfile.ZipFile(mscz_path) as mscz:
+        files = {name: mscz.read(name) for name in mscz.namelist()}
+    mscx_name = next(name for name in files if name.endswith(".mscx"))
+    mscx = ET.fromstring(files[mscx_name])
+    measures = mscx.find("Score/Staff").findall("Measure")
+    for i in indexes:
+        layout_break = ET.Element("LayoutBreak")
+        ET.SubElement(layout_break, "subtype").text = "noBreak"
+        measures[i].insert(1, layout_break)
+    files[mscx_name] = ET.tostring(mscx, encoding="UTF-8", xml_declaration=True)
+    with zipfile.ZipFile(mscz_path, "w", zipfile.ZIP_DEFLATED) as mscz:
+        for name, data in files.items():
+            mscz.writestr(name, data)
 
 
 def _hide_part_names(root: ET.Element) -> None:
@@ -132,6 +177,7 @@ def render(xml: bytes, title: str, qr_url: str, work_dir: Path) -> tuple[Path, P
     tree.write(cleaned_path, encoding="UTF-8", xml_declaration=True)
     style_path.write_text(SCORE_STYLE, encoding="UTF-8")
     _run_mscore("-S", style_path, "-o", mscz_path, cleaned_path)
+    _keep_with_next(mscz_path, _bars_to_keep_with_next(root))
     _run_mscore("-o", pdf_path, mscz_path)
     if not qr_box_is_clear(pdf_path):
         raise TitleTooLong(title)

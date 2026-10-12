@@ -11,7 +11,10 @@ from pypdf import PdfReader
 
 from app.errors import NotMusicXML, TitleTooLong
 from app.render import (
+    _bars_to_keep_with_next,
+    _break_lines,
     _hide_part_names,
+    _keep_with_next,
     _remove_courtesy_accidentals,
     _remove_tempo_marking,
     key_alterations,
@@ -179,3 +182,83 @@ def test_courtesy_cleanup_survives_odd_exports():
     _remove_courtesy_accidentals(root)
     accidentals = [n.find("accidental") is not None for n in root.iter("note")]
     assert accidentals == [True, True, False]
+
+
+def _score(endings: dict[int, str], count: int, prints: tuple[int, ...] = ()) -> ET.Element:
+    measures = []
+    for n in range(1, count + 1):
+        barline = ""
+        if n in endings:
+            barline = (
+                f'<barline location="left"><ending number="{endings[n]}" type="start"/></barline>'
+            )
+        printed = '<print new-page="yes"/>' if n in prints else ""
+        measures.append(f'<measure number="{n}">{printed}{barline}<note/></measure>')
+    return ET.fromstring(
+        f'<score-partwise><part id="P1">{"".join(measures)}</part></score-partwise>'
+    )
+
+
+def _line_starts(root: ET.Element) -> list[int]:
+    return [
+        int(m.get("number"))
+        for m in root.iter("measure")
+        if m.find("print") is not None and m.find("print").get("new-system") == "yes"
+    ]
+
+
+def test_four_bars_a_line_with_ending_pairs_side_by_side():
+    # A Nod to Tommy: A part 1-7 + endings 8/9, B part 10-16 + endings 17/18.
+    root = _score({8: "1", 9: "2", 17: "1", 18: "2"}, 18)
+    _break_lines(root)
+    assert _line_starts(root) == [5, 10, 14]
+
+
+def test_ending_numbered_one_and_two_then_three():
+    root = _score({8: "1, 2", 9: "3"}, 13)
+    _break_lines(root)
+    assert _line_starts(root) == [5, 10]
+
+
+def test_staffpad_breaks_are_replaced():
+    root = _score({}, 9, prints=(3, 7))
+    _break_lines(root)
+    assert _line_starts(root) == [5, 9]
+    assert not [p for p in root.iter("print") if p.get("new-page")]
+
+
+@needs_render
+def test_rendered_lines_start_at_the_expected_bars(fixture_xml, tmp_path):
+    # MuseScore prints a bar number at the start of every line after the first.
+    plain, _ = render(fixture_xml, "A Pint for Ciaran", QR_URL, tmp_path)
+    numbers = {t for t in _page_text(plain).split() if t.isdigit()} - {"1", "2"}
+    assert numbers == {"5", "10", "14", "18", "22"}
+
+
+def test_first_endings_followed_by_a_second_are_kept_with_it():
+    root = _score({8: "1", 9: "2", 17: "1", 18: "2"}, 18)
+    assert _bars_to_keep_with_next(root) == [7, 16]
+
+
+def test_keep_markers_are_written_into_the_musescore_file(tmp_path):
+    mscz = tmp_path / "score.mscz"
+    measures = "".join(f"<Measure><eid>m{i}</eid><voice/></Measure>" for i in range(3))
+    with zipfile.ZipFile(mscz, "w") as z:
+        mscx = f'<museScore><Score><Staff id="1">{measures}</Staff></Score></museScore>'
+        z.writestr("score.mscx", mscx)
+        z.writestr("META-INF/container.xml", "<container/>")
+    _keep_with_next(mscz, [1])
+    with zipfile.ZipFile(mscz) as z:
+        staff = ET.fromstring(z.read("score.mscx")).find("Score/Staff")
+        assert z.read("META-INF/container.xml") == b"<container/>"
+    breaks = [m.findtext("LayoutBreak/subtype") for m in staff.findall("Measure")]
+    assert breaks == [None, "noBreak", None]
+
+
+@needs_render
+def test_busy_tune_keeps_its_endings_on_one_line(tmp_path):
+    xml = (Path(__file__).parent / "fixtures" / "pigeons.xml").read_bytes()
+    plain, _ = render(xml, "Three Jolly Pigeons", QR_URL, tmp_path)
+    numbers = {int(t) for t in _page_text(plain).split() if t.isdigit()}
+    # 1-3 also appear as volta and triplet numbers; the tune has 18 bars.
+    assert numbers & set(range(4, 19)) == {5, 10, 14}
