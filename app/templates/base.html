@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{% block title %}Pauline's tunes{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='pico.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <header class="container">
+    <nav>
+      <ul><li><a href="{{ url_for('main.tunes') }}" class="brand">🎻 Pauline's tunes</a></li></ul>
+      {% if session.signed_in %}
+      <ul><li><a href="{{ url_for('main.add') }}" role="button">＋ Add a tune</a></li></ul>
+      {% endif %}
+    </nav>
+  </header>
+  <main class="container">{% block main %}{% endblock %}</main>
+  <script src="{{ url_for('static', filename='upload.js') }}"></script>
+</body>
+</html>

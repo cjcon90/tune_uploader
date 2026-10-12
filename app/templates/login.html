@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block main %}
+<article class="narrow">
+  <hgroup><h1>Welcome back</h1><p>Sign in to manage your tunes.</p></hgroup>
+  <form method="post">
+    <label>Password
+      <input type="password" name="password" autocomplete="current-password" required autofocus
+             {% if wrong %}aria-invalid="true"{% endif %}>
+      {% if wrong %}<small>That password didn't work. Try again.</small>{% endif %}
+    </label>
+    <button type="submit">Sign in</button>
+  </form>
+</article>
+{% endblock %}

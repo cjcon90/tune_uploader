@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block main %}
+<article class="narrow">
+  <p class="error">{{ message }}</p>
+  <div class="grid">
+    {% if back %}<a href="{{ back }}" role="button" class="outline">Go back</a>{% endif %}
+    <a href="{{ url_for('main.tunes') }}" role="button">My tunes</a>
+  </div>
+</article>
+{% endblock %}

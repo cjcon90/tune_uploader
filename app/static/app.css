@@ -1,0 +1,16 @@
+:root { --pico-font-size: 112.5%; --pico-border-radius: 0.75rem; }
+.brand { font-weight: 700; font-size: 1.15rem; text-decoration: none; }
+.narrow { max-width: 28rem; margin: 3rem auto; }
+.tune header { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.tune-title { font-size: 1.2rem; font-weight: 600; text-decoration: none; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.actions [role=button] { flex: 1 1 8rem; }
+.empty { text-align: center; color: var(--pico-muted-color); }
+.footer-link { text-align: center; margin-top: 2rem; }
+.error { color: var(--pico-del-color); font-weight: 600; }
+.progress { color: var(--pico-primary); font-weight: 600; }
+audio { width: 100%; margin-bottom: 1rem; }
+details summary[role=button] { width: 100%; }
+header nav .brand { margin: 0; }
+header nav [role=button] { margin: 0; }
+.tune header small { white-space: nowrap; }

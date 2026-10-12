@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block main %}
+<hgroup>
+  <h1>{{ tune.title }}</h1>
+  <p>{% if tune.archived %}Archived. Its QR code still works.{% else %}Added {{ tune.created | nicedate }}{% endif %}</p>
+</hgroup>
+
+<article>
+  <audio controls preload="none" src="{{ qr_url }}"></audio>
+  <div class="grid">
+    <a href="{{ url_for('main.sheet_pdf', tune_id=tune.id) }}" role="button" class="outline">Sheet music</a>
+    <a href="{{ url_for('main.sheet_qr_pdf', tune_id=tune.id) }}" role="button">Sheet music with QR</a>
+  </div>
+</article>
+
+<article>
+  <header><strong>Links</strong></header>
+  <label>QR code link (printed, never changes)
+    <fieldset role="group">
+      <input value="{{ qr_url }}" readonly>
+      <button type="button" class="secondary" data-copy="{{ qr_url }}">Copy</button>
+    </fieldset>
+  </label>
+  <label>Friendly link
+    <fieldset role="group">
+      <input value="{{ vanity_url }}" readonly>
+      <button type="button" class="secondary" data-copy="{{ vanity_url }}">Copy</button>
+    </fieldset>
+  </label>
+</article>
+
+<details>
+  <summary role="button" class="outline secondary">Rename</summary>
+  <form method="post" action="{{ url_for('main.rename', tune_id=tune.id) }}" data-upload>
+    <fieldset role="group">
+      <input name="title" value="{{ tune.title }}" required aria-label="New title">
+      <button type="submit">Rename</button>
+    </fieldset>
+    <progress hidden></progress>
+    <p class="progress" hidden></p>
+  </form>
+</details>
+
+<details>
+  <summary role="button" class="outline secondary">Replace recording</summary>
+  <form method="post" action="{{ url_for('main.replace_recording', tune_id=tune.id) }}"
+        enctype="multipart/form-data" data-upload>
+    <small>The QR code stays the same.</small>
+    <input type="file" name="recording" accept="audio/*,video/*" required>
+    <button type="submit">Upload new recording</button>
+    <progress hidden></progress>
+    <p class="progress" hidden></p>
+  </form>
+</details>
+
+<details>
+  <summary role="button" class="outline secondary">Replace sheet music</summary>
+  <form method="post" action="{{ url_for('main.replace_sheet', tune_id=tune.id) }}"
+        enctype="multipart/form-data" data-upload>
+    <small>For fixing notes. The title and QR code stay the same.</small>
+    <input type="file" name="sheet" required>
+    <button type="submit">Upload new sheet music</button>
+    <progress hidden></progress>
+    <p class="progress" hidden></p>
+  </form>
+</details>
+
+{% if tune.archived %}
+<form method="post" action="{{ url_for('main.restore', tune_id=tune.id) }}">
+  <button type="submit">Restore to my tunes</button>
+</form>
+{% else %}
+<form method="post" action="{{ url_for('main.archive', tune_id=tune.id) }}"
+      onsubmit="return confirm('Archive this tune? It will be hidden from your list. Its QR code keeps working.')">
+  <button type="submit" class="outline secondary">Archive</button>
+</form>
+{% endif %}
+{% endblock %}
