@@ -10,7 +10,7 @@ from tempfile import TemporaryDirectory
 
 from app import audio, render
 from app.errors import BlankTitle
-from app.naming import new_id, slug_fits, slugify, unique_slug
+from app.naming import new_id, slug_fits, slugify, tidy_title, unique_slug
 
 _lock = threading.Lock()
 
@@ -29,7 +29,7 @@ def _now() -> str:
 
 
 def _clean_title(title: str) -> str:
-    title = " ".join(title.split())
+    title = tidy_title(title)
     if not title:
         raise BlankTitle
     return title

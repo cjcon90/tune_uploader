@@ -169,3 +169,11 @@ def test_go_back_never_leaves_the_site(client):
         headers={"Referer": "https://evil.example/phish"},
     )
     assert b"evil.example" not in response.data
+
+
+def test_file_pickers_have_no_type_filter(client):
+    # iPadOS greys out real audio files when the picker has an accept filter.
+    tune_id = _add(client).headers["Location"].rsplit("/", 1)[1]
+    for page in (client.get("/add").data, client.get(f"/tune/{tune_id}").data):
+        assert b'type="file"' in page
+        assert b"accept=" not in page

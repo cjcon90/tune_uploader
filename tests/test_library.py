@@ -272,3 +272,11 @@ def test_uploaded_playlist_cannot_pull_in_local_files(s3, redirects, tmp_path):
     )
     with pytest.raises(NotAudio):
         library.add("The Kesh", XML, playlist.encode(), ".m3u8")
+
+
+def test_titles_are_tidied_on_add_and_rename(library):
+    tune_id = library.add("three jolly pigeons", XML, b"m4a", ".m4a")
+    assert library.get(tune_id)["title"] == "Three Jolly Pigeons"
+    assert library.pdf(tune_id, with_qr=False) == b"PDF Three Jolly Pigeons"
+    library.rename(tune_id, "the three jolly pigeons")
+    assert library.get(tune_id)["title"] == "The Three Jolly Pigeons"

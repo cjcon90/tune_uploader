@@ -46,7 +46,7 @@
   <form method="post" action="{{ url_for('main.replace_recording', tune_id=tune.id) }}"
         enctype="multipart/form-data" data-upload>
     <small>The QR code stays the same.</small>
-    <input type="file" name="recording" accept="audio/*,video/*" required>
+    <input type="file" name="recording" required>
     <button type="submit">Upload new recording</button>
     <progress hidden></progress>
     <p class="progress" hidden></p>
