@@ -214,6 +214,13 @@ def test_four_bars_a_line_with_ending_pairs_side_by_side():
     assert _line_starts(root) == [5, 10, 14]
 
 
+def test_busy_part_with_endings_splits_three_three_and_endings():
+    # Three Jolly Pigeons: ~9 notes a bar, so four bars plus the endings would squash.
+    root = ET.parse(Path(__file__).parent / "fixtures" / "pigeons.xml").getroot()
+    _break_lines(root)
+    assert _line_starts(root) == [4, 7, 10, 13, 16]
+
+
 def test_ending_numbered_one_and_two_then_three():
     root = _score({8: "1, 2", 9: "3"}, 13)
     _break_lines(root)
@@ -256,9 +263,9 @@ def test_keep_markers_are_written_into_the_musescore_file(tmp_path):
 
 
 @needs_render
-def test_busy_tune_keeps_its_endings_on_one_line(tmp_path):
+def test_busy_tune_renders_three_bars_a_line_with_endings_together(tmp_path):
     xml = (Path(__file__).parent / "fixtures" / "pigeons.xml").read_bytes()
     plain, _ = render(xml, "Three Jolly Pigeons", QR_URL, tmp_path)
     numbers = {int(t) for t in _page_text(plain).split() if t.isdigit()}
     # 1-3 also appear as volta and triplet numbers; the tune has 18 bars.
-    assert numbers & set(range(4, 19)) == {5, 10, 14}
+    assert numbers & set(range(4, 19)) == {4, 7, 10, 13, 16}

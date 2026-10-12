@@ -17,6 +17,8 @@ MSCORE = ["xvfb-run", "-a", "mscore"]
 # pt from the top-left; left of the title, above the tune type, in line with the staff
 QR_LEFT, QR_TOP, QR_SIZE = 42.5, 47.0, 44.0
 QR_MARGIN = 4.0
+# Notes on a line with both endings above which it squashes (Three Jolly Pigeons has 41-46).
+BUSY_LINE_NOTES = 36
 
 # MuseScore applies only these keys; MusicXML can't carry style, hence .mscz.
 SCORE_STYLE = """<?xml version="1.0" encoding="UTF-8"?>
@@ -56,15 +58,49 @@ def _break_lines(root: ET.Element) -> None:
     # Tune-book layout: four bars a line, where a 2nd-time ending shares its bar slot with the
     # 1st-time ending before it, so each 8-bar part fills two lines.
     for part in root.iter("part"):
-        slot = 0
+        lines: list[list[list[ET.Element]]] = []
         for measure in part.iter("measure"):
             for old in measure.findall("print"):
                 measure.remove(old)
-            if _is_later_ending(measure):
+            if _is_later_ending(measure) and lines:
+                lines[-1][-1].append(measure)
                 continue
-            if slot and slot % 4 == 0:
-                measure.insert(0, ET.Element("print", {"new-system": "yes"}))
-            slot += 1
+            if not lines or len(lines[-1]) == 4:
+                lines.append([])
+            lines[-1].append([measure])
+        for line in _split_busy_endings(lines)[1:]:
+            line[0][0].insert(0, ET.Element("print", {"new-system": "yes"}))
+
+
+def _split_busy_endings(lines: list[list[list[ET.Element]]]) -> list[list[list[ET.Element]]]:
+    # Four bars plus busy endings squash, so that part goes three, three, then bar 7 and endings.
+    result: list[list[list[ET.Element]]] = []
+    for line in lines:
+        if (
+            _has_ending_pair(line)
+            and _note_count(line) > BUSY_LINE_NOTES
+            and result
+            and len(result[-1]) == 4
+            and not _has_ending_pair(result[-1])
+        ):
+            slots = result.pop() + line
+            result += [slots[:3], slots[3:6], slots[6:]]
+        else:
+            result.append(line)
+    return result
+
+
+def _has_ending_pair(line: list[list[ET.Element]]) -> bool:
+    return any(len(slot) > 1 for slot in line)
+
+
+def _note_count(line: list[list[ET.Element]]) -> int:
+    return sum(
+        note.find("chord") is None
+        for slot in line
+        for measure in slot
+        for note in measure.findall("note")
+    )
 
 
 def _is_later_ending(measure: ET.Element) -> bool:
