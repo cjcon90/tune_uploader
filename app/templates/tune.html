@@ -2,7 +2,7 @@
 {% block main %}
 <hgroup>
   <h1>{{ tune.title }}</h1>
-  <p>{% if tune.archived %}Archived. Its QR code still works.{% else %}Added {{ tune.created | nicedate }}{% endif %}</p>
+  <p>{% if tune.archived %}Hidden from your list. Its QR code still works.{% else %}Added {{ tune.created | nicedate }}{% endif %}</p>
 </hgroup>
 
 <article>
@@ -15,64 +15,66 @@
 
 <article>
   <header><strong>Links</strong></header>
-  <label>QR code link (printed, never changes)
-    <fieldset role="group">
-      <input value="{{ qr_url }}" readonly>
-      <button type="button" class="secondary" data-copy="{{ qr_url }}">Copy</button>
-    </fieldset>
-  </label>
-  <label>Friendly link
-    <fieldset role="group">
-      <input value="{{ vanity_url }}" readonly>
-      <button type="button" class="secondary" data-copy="{{ vanity_url }}">Copy</button>
-    </fieldset>
-  </label>
+  <p class="link-label">QR code link (printed in the book, never changes)</p>
+  <div class="link-row">
+    <code>{{ qr_url }}</code>
+    <button type="button" class="secondary" data-copy="{{ qr_url }}">Copy</button>
+  </div>
+  <p class="link-label">Friendly link (for sharing)</p>
+  <div class="link-row">
+    <code>{{ vanity_url }}</code>
+    <button type="button" class="secondary" data-copy="{{ vanity_url }}">Copy</button>
+  </div>
 </article>
 
-<details>
-  <summary role="button" class="outline secondary">Rename</summary>
+<article>
+  <header><strong>✏️ Change the title</strong></header>
+  <p class="hint">The sheet music is updated with the new title. The QR code stays the same.</p>
   <form method="post" action="{{ url_for('main.rename', tune_id=tune.id) }}" data-upload>
-    <fieldset role="group">
-      <input name="title" value="{{ tune.title }}" required aria-label="New title">
-      <button type="submit">Rename</button>
-    </fieldset>
+    <input name="title" value="{{ tune.title }}" required aria-label="New title">
+    <button type="submit">Save new title</button>
     <progress hidden></progress>
     <p class="progress" hidden></p>
   </form>
-</details>
+</article>
 
-<details>
-  <summary role="button" class="outline secondary">Replace recording</summary>
+<article>
+  <header><strong>🎵 Upload a better recording</strong></header>
+  <p class="hint">Replaces the recording people hear when they scan the QR code. The QR code stays the same.</p>
   <form method="post" action="{{ url_for('main.replace_recording', tune_id=tune.id) }}"
         enctype="multipart/form-data" data-upload>
-    <small>The QR code stays the same.</small>
-    <input type="file" name="recording" required>
-    <button type="submit">Upload new recording</button>
+    <input type="file" name="recording" required aria-label="New recording">
+    <button type="submit">Upload recording</button>
     <progress hidden></progress>
     <p class="progress" hidden></p>
   </form>
-</details>
+</article>
 
-<details>
-  <summary role="button" class="outline secondary">Replace sheet music</summary>
+<article>
+  <header><strong>🎼 Upload corrected sheet music</strong></header>
+  <p class="hint">For fixing notes. Makes new PDFs. The title and QR code stay the same.</p>
   <form method="post" action="{{ url_for('main.replace_sheet', tune_id=tune.id) }}"
         enctype="multipart/form-data" data-upload>
-    <small>For fixing notes. The title and QR code stay the same.</small>
-    <input type="file" name="sheet" required>
-    <button type="submit">Upload new sheet music</button>
+    <input type="file" name="sheet" required aria-label="Corrected sheet music">
+    <button type="submit">Upload sheet music</button>
     <progress hidden></progress>
     <p class="progress" hidden></p>
   </form>
-</details>
+</article>
 
+<article>
 {% if tune.archived %}
-<form method="post" action="{{ url_for('main.restore', tune_id=tune.id) }}">
-  <button type="submit">Restore to my tunes</button>
-</form>
+  <header><strong>👁 Show in my list again</strong></header>
+  <form method="post" action="{{ url_for('main.restore', tune_id=tune.id) }}">
+    <button type="submit">Show in my list</button>
+  </form>
 {% else %}
-<form method="post" action="{{ url_for('main.archive', tune_id=tune.id) }}"
-      onsubmit="return confirm('Archive this tune? It will be hidden from your list. Its QR code keeps working.')">
-  <button type="submit" class="outline secondary">Archive</button>
-</form>
+  <header><strong>🙈 Hide from my list</strong></header>
+  <p class="hint">It still plays for anyone with the book. You can bring it back from “Hidden tunes”.</p>
+  <form method="post" action="{{ url_for('main.archive', tune_id=tune.id) }}"
+        onsubmit="return confirm('Hide this tune from your list? Its QR code keeps working.')">
+    <button type="submit" class="outline secondary">Hide from my list</button>
+  </form>
 {% endif %}
+</article>
 {% endblock %}

@@ -46,3 +46,21 @@ document.querySelectorAll("[data-copy]").forEach((button) => {
     button.textContent = "Copied ✓";
   });
 });
+
+// Play in place on the list, one tune at a time.
+document.querySelectorAll("[data-play]").forEach((button) => {
+  const audio = button.nextElementSibling;
+  button.addEventListener("click", () => {
+    document.querySelectorAll("audio").forEach((other) => { if (other !== audio) other.pause(); });
+    if (audio.paused) audio.play(); else audio.pause();
+  });
+  audio.addEventListener("play", () => { button.textContent = "❚❚ Pause"; });
+  audio.addEventListener("pause", () => { button.textContent = "▶ Play"; });
+});
+
+// Tapping anywhere on a tune card (outside its buttons) opens the tune.
+document.querySelectorAll("[data-href]").forEach((card) => {
+  card.addEventListener("click", (event) => {
+    if (!event.target.closest("a, button, audio")) window.location = card.dataset.href;
+  });
+});

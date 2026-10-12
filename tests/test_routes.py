@@ -39,7 +39,7 @@ def test_session_cookie_is_locked_down(app):
 def test_add_then_see_it_listed(client, library):
     response = _add(client)
     assert response.status_code == 302
-    tune_id = response.headers["Location"].rsplit("/", 1)[1]
+    tune_id = _tune_id(response)
     assert b"The Kesh" in client.get("/").data
     page = client.get(f"/tune/{tune_id}").data
     assert f"https://audio.paulinemahon.com/{tune_id}".encode() in page
@@ -76,7 +76,7 @@ def test_unknown_tune_is_404_without_alert(client, app):
 
 
 def test_rename_archive_restore(client, library):
-    tune_id = _add(client).headers["Location"].rsplit("/", 1)[1]
+    tune_id = _tune_id(_add(client))
     client.post(f"/tune/{tune_id}/rename", data={"title": "The Old Kesh"})
     assert library.get(tune_id)["title"] == "The Old Kesh"
     client.post(f"/tune/{tune_id}/archive")
@@ -87,7 +87,7 @@ def test_rename_archive_restore(client, library):
 
 
 def test_replace_recording_and_sheet(client, library):
-    tune_id = _add(client).headers["Location"].rsplit("/", 1)[1]
+    tune_id = _tune_id(_add(client))
     client.post(
         f"/tune/{tune_id}/recording",
         data={"recording": (io.BytesIO(b"new"), "take2.wav")},
@@ -104,7 +104,7 @@ def test_replace_recording_and_sheet(client, library):
 
 
 def test_pdf_downloads_open_inline_with_tune_name(client):
-    tune_id = _add(client).headers["Location"].rsplit("/", 1)[1]
+    tune_id = _tune_id(_add(client))
     response = client.get(f"/tune/{tune_id}/sheet-qr.pdf")
     assert response.mimetype == "application/pdf"
     assert response.headers["Content-Disposition"].startswith("inline")
@@ -173,7 +173,75 @@ def test_go_back_never_leaves_the_site(client):
 
 def test_file_pickers_have_no_type_filter(client):
     # iPadOS greys out real audio files when the picker has an accept filter.
-    tune_id = _add(client).headers["Location"].rsplit("/", 1)[1]
+    tune_id = _tune_id(_add(client))
     for page in (client.get("/add").data, client.get(f"/tune/{tune_id}").data):
         assert b'type="file"' in page
         assert b"accept=" not in page
+
+
+def _tune_id(response) -> str:
+    return response.headers["Location"].split("?")[0].rsplit("/", 1)[1]
+
+
+def test_saving_a_tune_confirms_the_stored_title(client):
+    page = _add(client, title="three jolly pigeons")
+    assert page.headers["Location"].endswith("?done=saved")
+    html = client.get(page.headers["Location"]).data.decode()
+    assert "Saved as “Three Jolly Pigeons”" in html
+
+
+def test_every_change_says_what_happened(client):
+    tune_id = _tune_id(_add(client))
+    checks = [
+        (f"/tune/{tune_id}/rename", {"title": "The Old Kesh"}, "Title changed"),
+        (
+            f"/tune/{tune_id}/recording",
+            {"recording": (io.BytesIO(b"new"), "take2.m4a")},
+            "New recording uploaded",
+        ),
+        (
+            f"/tune/{tune_id}/sheet",
+            {"sheet": (io.BytesIO(XML), "fixed.xml")},
+            "New sheet music uploaded",
+        ),
+        (f"/tune/{tune_id}/archive", {}, "hidden from your list"),
+        (f"/tune/{tune_id}/restore", {}, "back in your list"),
+    ]
+    for url, data, message in checks:
+        response = client.post(
+            url, data=data, content_type="multipart/form-data", follow_redirects=True
+        )
+        assert message in response.data.decode(), url
+
+
+def test_home_page_makes_opening_a_tune_obvious_and_plays_in_place(client):
+    tune_id = _tune_id(_add(client))
+    html = client.get("/").data.decode()
+    assert f'href="/tune/{tune_id}"' in html
+    assert "Open" in html
+    assert f'<audio preload="none" src="https://audio.paulinemahon.com/{tune_id}"' in html
+    assert 'href="https://audio.paulinemahon.com/' not in html
+
+
+def test_inner_pages_have_a_way_back(client):
+    tune_id = _tune_id(_add(client))
+    for url in ("/add", f"/tune/{tune_id}", "/archived"):
+        assert "Back to my tunes" in client.get(url).data.decode(), url
+
+
+def test_archive_is_called_hiding(client):
+    tune_id = _tune_id(_add(client))
+    assert "Hide from my list" in client.get(f"/tune/{tune_id}").data.decode()
+    assert "Hidden tunes" in client.get("/archived").data.decode()
+    assert "Archive" not in client.get(f"/tune/{tune_id}").data.decode()
+
+
+def test_links_are_shown_in_full(client):
+    tune_id = _tune_id(_add(client))
+    html = client.get(f"/tune/{tune_id}").data.decode()
+    assert 'value="https://audio' not in html
+    assert ">https://audio.paulinemahon.com/the-kesh<" in html
+
+
+def test_add_page_has_no_example_title(client):
+    assert "placeholder" not in client.get("/add").data.decode()

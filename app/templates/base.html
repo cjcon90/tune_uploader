@@ -17,7 +17,13 @@
       {% endif %}
     </nav>
   </header>
-  <main class="container">{% block main %}{% endblock %}</main>
+  <main class="container">
+    {% if session.signed_in and request.endpoint != "main.tunes" %}
+    <p class="back"><a href="{{ url_for('main.tunes') }}">‹ Back to my tunes</a></p>
+    {% endif %}
+    {% if done %}<p class="notice" role="status">✓ {{ done }}</p>{% endif %}
+    {% block main %}{% endblock %}
+  </main>
   <script src="{{ url_for('static', filename='upload.js') }}"></script>
 </body>
 </html>

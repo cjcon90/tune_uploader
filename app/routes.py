@@ -18,6 +18,22 @@ from app import config
 
 bp = Blueprint("main", __name__)
 
+# Shown as a banner after each change; the code rides on the redirect URL because the upload
+# script follows the redirect itself and would use up a one-time flash message.
+DONE_MESSAGES = {
+    "saved": "Saved as “{title}”.",
+    "renamed": "Title changed to “{title}”. The QR code is the same.",
+    "recording": "New recording uploaded. The QR code is the same.",
+    "sheet": "New sheet music uploaded. Both PDFs have been updated.",
+    "hidden": "The tune is now hidden from your list. Its QR code still works.",
+    "shown": "The tune is back in your list.",
+}
+
+
+def _done_message(title: str = "") -> str | None:
+    message = DONE_MESSAGES.get(request.args.get("done", ""))
+    return message.format(title=title) if message else None
+
 
 def _library():
     return current_app.extensions["library"]
@@ -49,7 +65,7 @@ def logout():
 def tunes():
     q = request.args.get("q", "").strip()
     found = [t for t in _library().list() if q.lower() in t["title"].lower()]
-    return render_template("tunes.html", tunes=found, q=q, archived=False)
+    return render_template("tunes.html", tunes=found, q=q, archived=False, done=_done_message())
 
 
 @bp.get("/archived")
@@ -68,7 +84,7 @@ def add():
         recording.read(),
         _suffix(recording),
     )
-    return redirect(url_for("main.tune", tune_id=tune_id))
+    return redirect(url_for("main.tune", tune_id=tune_id, done="saved"))
 
 
 @bp.get("/tune/<tune_id>")
@@ -80,38 +96,39 @@ def tune(tune_id: str):
         tune=t,
         qr_url=library.qr_url(tune_id),
         vanity_url=f"https://{config.AUDIO_HOST}/{t['slug']}",
+        done=_done_message(t["title"]),
     )
 
 
 @bp.post("/tune/<tune_id>/rename")
 def rename(tune_id: str):
     _library().rename(tune_id, request.form.get("title", ""))
-    return redirect(url_for("main.tune", tune_id=tune_id))
+    return redirect(url_for("main.tune", tune_id=tune_id, done="renamed"))
 
 
 @bp.post("/tune/<tune_id>/recording")
 def replace_recording(tune_id: str):
     recording = request.files["recording"]
     _library().replace_audio(tune_id, recording.read(), _suffix(recording))
-    return redirect(url_for("main.tune", tune_id=tune_id))
+    return redirect(url_for("main.tune", tune_id=tune_id, done="recording"))
 
 
 @bp.post("/tune/<tune_id>/sheet")
 def replace_sheet(tune_id: str):
     _library().replace_sheet(tune_id, request.files["sheet"].read())
-    return redirect(url_for("main.tune", tune_id=tune_id))
+    return redirect(url_for("main.tune", tune_id=tune_id, done="sheet"))
 
 
 @bp.post("/tune/<tune_id>/archive")
 def archive(tune_id: str):
     _library().set_archived(tune_id, True)
-    return redirect(url_for("main.tunes"))
+    return redirect(url_for("main.tunes", done="hidden"))
 
 
 @bp.post("/tune/<tune_id>/restore")
 def restore(tune_id: str):
     _library().set_archived(tune_id, False)
-    return redirect(url_for("main.tune", tune_id=tune_id))
+    return redirect(url_for("main.tune", tune_id=tune_id, done="shown"))
 
 
 @bp.get("/tune/<tune_id>/sheet.pdf")

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block main %}
 {% if archived %}
-  <hgroup><h1>Archived tunes</h1><p>Hidden from your list. Their QR codes still work.</p></hgroup>
+  <hgroup><h1>Hidden tunes</h1><p>These are hidden from your list. Their QR codes still work.</p></hgroup>
 {% else %}
   <form method="get" role="search">
     <input type="search" name="q" value="{{ q }}" placeholder="Search your tunes" aria-label="Search">
@@ -9,19 +9,23 @@
   </form>
 {% endif %}
 {% for t in tunes %}
-<article class="tune">
+<article class="tune" data-href="{{ url_for('main.tune', tune_id=t.id) }}">
   <header>
-    <a href="{{ url_for('main.tune', tune_id=t.id) }}" class="tune-title">{{ t.title }}</a>
-    <small>{{ t.created | nicedate }}</small>
+    <div>
+      <a href="{{ url_for('main.tune', tune_id=t.id) }}" class="tune-title">{{ t.title }}</a>
+      <small class="date">{{ t.created | nicedate }}</small>
+    </div>
+    <a href="{{ url_for('main.tune', tune_id=t.id) }}" role="button" class="open">Open ›</a>
   </header>
   <div class="actions">
-    <a href="https://{{ config_audio_host }}/{{ t.id }}" role="button" class="outline">▶ Play</a>
+    <button type="button" class="outline" data-play>▶ Play</button>
+    <audio preload="none" src="https://{{ config_audio_host }}/{{ t.id }}"></audio>
     <a href="{{ url_for('main.sheet_pdf', tune_id=t.id) }}" role="button" class="outline secondary">Sheet music</a>
     <a href="{{ url_for('main.sheet_qr_pdf', tune_id=t.id) }}" role="button" class="outline secondary">With QR</a>
   </div>
 </article>
 {% else %}
-<article class="empty">{% if q %}No tunes match “{{ q }}”.{% else %}Nothing here yet. Tap “Add a tune” to start.{% endif %}</article>
+<article class="empty">{% if q %}No tunes match “{{ q }}”.{% elif archived %}No hidden tunes.{% else %}Nothing here yet. Tap “Add a tune” to start.{% endif %}</article>
 {% endfor %}
-{% if not archived %}<p class="footer-link"><a href="{{ url_for('main.archived') }}" class="secondary">Archived tunes</a></p>{% endif %}
+{% if not archived %}<p class="footer-link"><a href="{{ url_for('main.archived') }}" class="secondary">Hidden tunes</a></p>{% endif %}
 {% endblock %}

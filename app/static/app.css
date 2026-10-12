@@ -4,7 +4,7 @@
 .tune header { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
 .tune-title { font-size: 1.2rem; font-weight: 600; text-decoration: none; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.actions [role=button] { flex: 1 1 8rem; }
+.actions > :not(audio) { flex: 1 1 8rem; margin: 0; }
 .empty { text-align: center; color: var(--pico-muted-color); }
 .footer-link { text-align: center; margin-top: 2rem; }
 .error { color: var(--pico-del-color); font-weight: 600; }
@@ -14,3 +14,16 @@ details summary[role=button] { width: 100%; }
 header nav .brand { margin: 0; }
 header nav [role=button] { margin: 0; }
 .tune header small { white-space: nowrap; }
+.back { margin-bottom: 0.75rem; }
+.back a { text-decoration: none; font-weight: 600; }
+.notice { background: var(--pico-ins-color); color: #fff; padding: 0.85rem 1rem; border-radius: var(--pico-border-radius); font-weight: 600; }
+.tune { cursor: pointer; }
+.tune header { align-items: center; }
+.tune .open { margin: 0; padding: 0.45rem 1rem; white-space: nowrap; }
+.tune audio { display: none; }
+.link-label { margin: 0.75rem 0 0.35rem; font-size: 0.95rem; color: var(--pico-muted-color); }
+.link-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: stretch; }
+.link-row code { flex: 1 1 18rem; min-width: 0; padding: 0.6rem 0.75rem; word-break: break-all; }
+.link-row button { margin: 0; flex: 0 0 auto; }
+.hint { color: var(--pico-muted-color); margin-bottom: 0.75rem; }
+.tune .date { display: block; color: var(--pico-muted-color); }
