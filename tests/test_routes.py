@@ -130,3 +130,42 @@ def test_add_button_uses_a_plain_plus(client):
     page = client.get("/").data.decode()
     assert "+ Add a tune" in page
     assert "＋" not in page
+
+
+def test_stray_key_error_alerts_instead_of_claiming_not_found(client, app, library):
+    def broken(*args, **kwargs):
+        raise KeyError("result")
+
+    library.list = broken
+    response = client.get("/")
+    assert response.status_code == 500
+    assert app.sent
+
+
+def test_too_big_upload_explains_the_limit(client, app):
+    app.config["MAX_CONTENT_LENGTH"] = 1000
+    response = _add(client, recording=b"x" * 5000)
+    assert response.status_code == 413
+    assert b"too big" in response.data
+    assert app.sent == []
+
+
+def test_wrong_password_is_slowed_down(app, monkeypatch):
+    slept = []
+    monkeypatch.setattr("app.routes.time.sleep", slept.append)
+    app.test_client().post("/login", data={"password": "nope"})
+    assert slept and slept[0] >= 1
+
+
+def test_go_back_never_leaves_the_site(client):
+    response = client.post(
+        "/add",
+        data={
+            "title": " ",
+            "sheet": (io.BytesIO(XML), "a.xml"),
+            "recording": (io.BytesIO(b"m"), "a.m4a"),
+        },
+        content_type="multipart/form-data",
+        headers={"Referer": "https://evil.example/phish"},
+    )
+    assert b"evil.example" not in response.data

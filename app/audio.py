@@ -27,3 +27,5 @@ def to_mp3(src: Path, dest: Path) -> None:
         )
     except subprocess.CalledProcessError as e:
         raise NotAudio(e.stderr.decode(errors="replace")) from e
+    except subprocess.TimeoutExpired as e:
+        raise NotAudio("ffmpeg timed out") from e

@@ -110,3 +110,27 @@ def test_failed_operation_raises():
     )
     with pytest.raises(RedirectError, match="bad url"):
         _client().point("k7mq3xpw", "the-kesh")
+
+
+@responses.activate
+def test_target_reads_where_a_source_points():
+    _list(_item("i1", "k7mq3xpw", "the-kesh"))
+    assert _client().target("k7mq3xpw") == "the-kesh"
+    assert _client().target("nope") is None
+
+
+@responses.activate
+def test_remove_deletes_only_that_item():
+    _list(_item("i1", "the-kesh", "the-kesh-jig"), _item("i2", "k7mq3xpw", "the-kesh-jig"))
+    responses.delete(ITEMS, json={"success": True, "result": {"operation_id": "op1"}})
+    _op("op1")
+    _client().remove("the-kesh")
+    assert json.loads(responses.calls[1].request.body) == {"items": [{"id": "i1"}]}
+    assert "PUT" not in [c.request.method for c in responses.calls]
+
+
+@responses.activate
+def test_remove_is_a_no_op_when_missing():
+    _list()
+    _client().remove("the-kesh")
+    assert len(responses.calls) == 1

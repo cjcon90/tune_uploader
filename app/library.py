@@ -1,5 +1,7 @@
 """Every change uploads first and writes tunes.json last: a failure never lists a half-made tune."""
 
+from __future__ import annotations
+
 import threading
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -8,12 +10,17 @@ from tempfile import TemporaryDirectory
 
 from app import audio, render
 from app.errors import BlankTitle
-from app.naming import new_id, slugify, unique_slug
+from app.naming import new_id, slug_fits, slugify, unique_slug
 
 _lock = threading.Lock()
 
 
 class RedirectTargetMissing(RuntimeError):
+    pass
+
+
+# Not a KeyError, so a stray KeyError elsewhere still reaches the alerting 500 handler.
+class TuneNotFound(Exception):
     pass
 
 
@@ -36,7 +43,7 @@ def _find(tunes: list[dict], tune_id: str) -> dict:
     for tune in tunes:
         if tune["id"] == tune_id:
             return tune
-    raise KeyError(tune_id)
+    raise TuneNotFound(tune_id)
 
 
 class Library:
@@ -47,7 +54,7 @@ class Library:
         audio_host: str,
         render: Callable = render.render,
         to_mp3: Callable = audio.to_mp3,
-        after_change: Callable[[str], None] = lambda tune_id: None,
+        after_change: Callable[[str, str], None] = lambda tune_id, slug: None,
     ) -> None:
         self._store = store
         self._redirects = redirects
@@ -75,8 +82,8 @@ class Library:
         with _lock:
             tunes = self._store.load_tunes()
             taken = _taken(tunes)
-            tune_id = new_id(taken)
-            slug = unique_slug(title, taken | {tune_id})
+            tune_id = self._fresh_id(taken)
+            slug = self._fresh_slug(title, taken | {tune_id})
             with TemporaryDirectory() as tmp:
                 work = Path(tmp)
                 mp3 = self._convert(audio, audio_suffix, work)
@@ -102,7 +109,7 @@ class Library:
                 }
             )
             self._store.save_tunes(tunes)
-        self._after_change(tune_id)
+        self._after_change(tune_id, slug)
         return tune_id
 
     def rename(self, tune_id: str, title: str) -> None:
@@ -115,18 +122,14 @@ class Library:
             xml = self._store.get_file(tune_id, "source.xml")
             with TemporaryDirectory() as tmp:
                 plain, qr = self._render(xml, title, self.qr_url(tune_id), Path(tmp))
+                new_slug = self._rename_slug(tune, title, tunes)
+                if new_slug:
+                    self._move_slug(tune, new_slug)
                 self._put_pdfs(tune_id, plain, qr)
-            if slugify(title) != tune["slug"]:
-                new_slug = unique_slug(title, _taken(tunes))
-                self._store.copy_audio(tune_id, new_slug)
-                for source in (tune_id, tune["slug"], *tune["old_slugs"]):
-                    self._point(source, new_slug)
-                tune["old_slugs"].append(tune["slug"])
-                tune["slug"] = new_slug
             tune["title"] = title
             tune["updated"] = _now()
             self._store.save_tunes(tunes)
-        self._after_change(tune_id)
+        self._after_change(tune_id, tune["slug"])
 
     def replace_audio(self, tune_id: str, audio: bytes, audio_suffix: str) -> None:
         with _lock:
@@ -137,11 +140,13 @@ class Library:
             self._store.put_file(
                 tune_id, f"original{audio_suffix}", audio, "application/octet-stream"
             )
-            self._store.put_audio(tune_id, mp3)
-            self._store.put_audio(tune["slug"], mp3)
+            # After a half-finished rename the QR may already point past tune["slug"].
+            live = self._redirects.target(tune_id)
+            for key in {tune_id, tune["slug"], live} - {None}:
+                self._store.put_audio(key, mp3)
             tune["updated"] = _now()
             self._store.save_tunes(tunes)
-        self._after_change(tune_id)
+        self._after_change(tune_id, tune["slug"])
 
     def replace_sheet(self, tune_id: str, xml: bytes) -> None:
         render.parse(xml)
@@ -163,8 +168,42 @@ class Library:
             tune["updated"] = _now()
             self._store.save_tunes(tunes)
 
+    def _fresh_id(self, taken: set[str]) -> str:
+        # tunes.json can lag reality (a failed change, a restored backup); R2 is the truth.
+        taken = set(taken)
+        while self._store.audio_exists(tune_id := new_id(taken)):
+            taken.add(tune_id)
+        return tune_id
+
+    def _fresh_slug(self, title: str, taken: set[str]) -> str:
+        taken = set(taken)
+        while self._store.audio_exists(slug := unique_slug(title, taken)):
+            taken.add(slug)
+        return slug
+
+    def _rename_slug(self, tune: dict, title: str, tunes: list[dict]) -> str | None:
+        if slug_fits(title, tune["slug"]):
+            return None
+        base = slugify(title) or "tune"
+        if base in tune["old_slugs"]:
+            return base
+        return self._fresh_slug(title, _taken(tunes))
+
+    def _move_slug(self, tune: dict, new_slug: str) -> None:
+        self._store.copy_audio(tune["id"], new_slug)
+        reused = new_slug in tune["old_slugs"]
+        if reused:
+            self._redirects.remove(new_slug)
+        old_slugs = [s for s in tune["old_slugs"] if s != new_slug]
+        for source in (tune["id"], tune["slug"], *old_slugs):
+            self._point(source, new_slug)
+        tune["old_slugs"] = [*old_slugs, tune["slug"]]
+        tune["slug"] = new_slug
+
     def _convert(self, audio: bytes, audio_suffix: str, work: Path) -> bytes:
-        src, dest = work / f"upload{audio_suffix}", work / "audio.mp3"
+        # No extension: ffmpeg then sniffs the content and won't treat an upload named .m3u8
+        # as a playlist that pulls in other files.
+        src, dest = work / "upload", work / "audio.mp3"
         src.write_bytes(audio)
         self._to_mp3(src, dest)
         return dest.read_bytes()

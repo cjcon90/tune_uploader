@@ -1,4 +1,5 @@
 import io
+import time
 from pathlib import Path
 
 from flask import (
@@ -33,6 +34,7 @@ def login():
             session.permanent = True
             session["signed_in"] = True
             return redirect(url_for("main.tunes"))
+        time.sleep(2)  # slows password guessing; there is only one account
         return render_template("login.html", wrong=True), 401
     return render_template("login.html", wrong=False)
 

@@ -3,6 +3,14 @@ document.querySelectorAll("form[data-upload]").forEach((form) => {
     event.preventDefault();
     const bar = form.querySelector("progress");
     const status = form.querySelector(".progress");
+    const bytes = [...form.querySelectorAll("input[type=file]")]
+      .flatMap((input) => [...input.files])
+      .reduce((total, file) => total + file.size, 0);
+    if (bytes > 200 * 1024 * 1024) {  // matches MAX_UPLOAD_BYTES in app/config.py
+      status.hidden = false;
+      status.textContent = "That file is too big. Recordings and sheet music must be under 200 MB.";
+      return;
+    }
     const button = form.querySelector("button[type=submit]");
     button.disabled = true;
     bar.hidden = false;

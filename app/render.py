@@ -74,7 +74,7 @@ def _remove_courtesy_accidentals(root: ET.Element) -> None:
         for measure in part.iter("measure"):
             fifths = measure.find("attributes/key/fifths")
             if fifths is not None:
-                key = key_alterations(int(fifths.text))
+                key = key_alterations(int(float(fifths.text)))
             for note in measure.findall("note"):
                 accidental = note.find("accidental")
                 if accidental is None or "yes" not in (
@@ -83,8 +83,10 @@ def _remove_courtesy_accidentals(root: ET.Element) -> None:
                 ):
                     continue
                 pitch = note.find("pitch")
+                if pitch is None:  # unpitched percussion
+                    continue
                 alter_elem = pitch.find("alter")
-                alter = int(alter_elem.text) if alter_elem is not None else 0
+                alter = float(alter_elem.text) if alter_elem is not None else 0
                 if alter == key.get(pitch.find("step").text, 0):
                     note.remove(accidental)
 

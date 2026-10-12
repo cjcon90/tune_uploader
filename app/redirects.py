@@ -44,12 +44,21 @@ class Redirects:
                 return found
             params = {"cursor": after}
 
+    def target(self, source: str) -> str | None:
+        existing = self.items().get(source)
+        return existing[1] if existing else None
+
+    def remove(self, source: str) -> None:
+        existing = self.items().get(source)
+        if existing:
+            self._delete(existing[0])
+
     def point(self, source: str, target: str) -> None:
         existing = self.items().get(source)
         if existing and existing[1] == target:
             return
         if existing:
-            self._wait(self._call("DELETE", self._items_url, json={"items": [{"id": existing[0]}]}))
+            self._delete(existing[0])
         item = {
             "redirect": {
                 "source_url": f"{self._host}/{source}",
@@ -62,6 +71,9 @@ class Redirects:
             }
         }
         self._wait(self._call("POST", self._items_url, json=[item]))
+
+    def _delete(self, item_id: str) -> None:
+        self._wait(self._call("DELETE", self._items_url, json={"items": [{"id": item_id}]}))
 
     def _call(self, method: str, url: str, **kwargs) -> dict:
         response = self._session.request(method, url, timeout=30, **kwargs)

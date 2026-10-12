@@ -26,3 +26,8 @@ def unique_slug(title: str, taken: set[str]) -> str:
         slug = f"{base}-{n}"
         n += 1
     return slug
+
+
+def slug_fits(title: str, slug: str) -> bool:
+    base = slugify(title) or "tune"
+    return slug == base or re.fullmatch(rf"{re.escape(base)}-\d+", slug) is not None

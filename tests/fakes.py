@@ -10,6 +10,13 @@ class FakeRedirects:
         self.calls.append((source, target))
         self.table[source] = target
 
+    def remove(self, source: str) -> None:
+        self.calls.append((source, None))
+        self.table.pop(source, None)
+
+    def target(self, source: str) -> str | None:
+        return self.table.get(source)
+
 
 def fake_render(xml: bytes, title: str, qr_url: str, work_dir: Path) -> tuple[Path, Path]:
     plain, qr = work_dir / "sheet.pdf", work_dir / "sheet-qr.pdf"

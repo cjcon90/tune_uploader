@@ -80,3 +80,12 @@ def test_rejects_a_file_that_is_not_audio(tmp_path):
     src.write_text("definitely not audio")
     with pytest.raises(NotAudio):
         to_mp3(src, tmp_path / "out.mp3")
+
+
+def test_a_hung_conversion_is_reported_as_unreadable(tmp_path, monkeypatch):
+    def hang(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd="ffmpeg", timeout=300)
+
+    monkeypatch.setattr("app.audio.subprocess.run", hang)
+    with pytest.raises(NotAudio):
+        to_mp3(tmp_path / "a.m4a", tmp_path / "a.mp3")

@@ -162,3 +162,20 @@ def test_render_makes_plain_and_qr_pdfs(fixture_xml, tmp_path):
 def test_render_refuses_a_title_that_reaches_the_qr(fixture_xml, tmp_path):
     with pytest.raises(TitleTooLong):
         render(fixture_xml, "A Pint for Ciaran and the Humours of Ballyloughlin", QR_URL, tmp_path)
+
+
+def test_courtesy_cleanup_survives_odd_exports():
+    root = ET.fromstring(
+        """<score-partwise><part id="P1"><measure number="1">
+        <attributes><key><fifths>1.0</fifths></key></attributes>
+        <note><unpitched><display-step>F</display-step></unpitched>
+          <accidental cautionary="yes">sharp</accidental></note>
+        <note><pitch><step>F</step><alter>0.5</alter><octave>4</octave></pitch>
+          <accidental cautionary="yes">quarter-sharp</accidental></note>
+        <note><pitch><step>F</step><alter>1</alter><octave>4</octave></pitch>
+          <accidental cautionary="yes">sharp</accidental></note>
+        </measure></part></score-partwise>"""
+    )
+    _remove_courtesy_accidentals(root)
+    accidentals = [n.find("accidental") is not None for n in root.iter("note")]
+    assert accidentals == [True, True, False]
